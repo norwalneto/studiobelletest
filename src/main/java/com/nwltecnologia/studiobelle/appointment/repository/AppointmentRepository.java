@@ -12,9 +12,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     Optional<Appointment> findByIdAndTenantId(Long id, String tenantId);
 
-    boolean existsByTenantIdAndStartTimeLessThanAndEndTimeGreaterThan(
-            String tenantId,
-            LocalDateTime requestedEnd,
-            LocalDateTime requestedStart
-    );
+    boolean existsByTenantIdAndStartTimeLessThanAndEndTimeGreaterThan(String tenantId, LocalDateTime requestedEnd, LocalDateTime requestedStart);
+
+    boolean existsByTenantIdAndProfessionalIdAndStartTimeLessThanAndEndTimeGreaterThan(String tenantId, Long professionalId,
+                                                                                       LocalDateTime requestedEnd,
+                                                                                       LocalDateTime requestedStart);
 }

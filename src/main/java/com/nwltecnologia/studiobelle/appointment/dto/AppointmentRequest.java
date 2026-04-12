@@ -13,6 +13,9 @@ public record AppointmentRequest(
         @NotBlank @Size(min = 8, max = 40) String clientPhone,
         @NotBlank @Size(min = 3, max = 400) String serviceDescription,
         @NotNull @Future LocalDateTime startTime,
-        @NotNull @Future LocalDateTime endTime
+        @NotNull @Future LocalDateTime endTime,
+        Long customerId,
+        Long serviceId,
+        Long professionalId
 ) {
 }

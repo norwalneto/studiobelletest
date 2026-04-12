@@ -1,9 +1,13 @@
 package com.nwltecnologia.studiobelle.appointment.entity;
 
+import com.nwltecnologia.studiobelle.customer.entity.Customer;
+import com.nwltecnologia.studiobelle.professional.entity.Professional;
+import com.nwltecnologia.studiobelle.servicecatalog.entity.ServiceOffering;
 import com.nwltecnologia.studiobelle.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
@@ -30,6 +34,18 @@ public class Appointment {
     @JoinColumn(name = "owner_user_id", nullable = false)
     private User ownerUser;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private ServiceOffering service;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_id")
+    private Professional professional;
+
     @Column(nullable = false, length = 120)
     private String clientName;
 
@@ -38,6 +54,9 @@ public class Appointment {
 
     @Column(nullable = false, length = 400)
     private String serviceDescription;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal servicePrice;
 
     @Column(nullable = false)
     private LocalDateTime startTime;
