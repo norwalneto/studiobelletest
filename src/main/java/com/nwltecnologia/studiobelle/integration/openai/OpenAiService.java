@@ -5,6 +5,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +23,26 @@ public class OpenAiService {
     }
 
     public String generateWhatsAppMessage(String customerName, String serviceName, String startTimeText) {
-        if (apiKey == null || apiKey.isBlank()) {
-            return "Olá " + customerName + ", seu agendamento para " + serviceName + " foi confirmado para " + startTimeText + ".";
-        }
+        return humanizeMessage("Olá " + customerName + ", seu agendamento para " + serviceName + " foi confirmado para " + startTimeText + ".");
+    }
 
+    public String humanizeMessage(String baseMessage) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return baseMessage;
+        }
+        return ask("Você melhora mensagens curtas de WhatsApp com tom gentil e profissional.",
+                "Melhore mantendo o significado: " + baseMessage);
+    }
+
+    public Map<String, String> extractAppointmentData(String rawMessage) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return extractFallback(rawMessage);
+        }
+        String content = ask("Extraia dados de agendamento e retorne JSON com campos: nome,data,hora,servico. Data em yyyy-MM-dd e hora em HH:mm.", rawMessage);
+        return parseLooseJson(content);
+    }
+
+    private String ask(String systemText, String userText) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
@@ -33,22 +50,40 @@ public class OpenAiService {
         Map<String, Object> body = Map.of(
                 "model", model,
                 "messages", List.of(
-                        Map.of("role", "system", "content", "Você cria mensagens curtas e gentis para confirmação de agendamento no WhatsApp."),
-                        Map.of("role", "user", "content", "Crie mensagem para cliente " + customerName +
-                                ", serviço " + serviceName + ", horário " + startTimeText + ".")
+                        Map.of("role", "system", "content", systemText),
+                        Map.of("role", "user", "content", userText)
                 ),
-                "temperature", 0.6
+                "temperature", 0.4
         );
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.exchange(
-                "https://api.openai.com/v1/chat/completions",
-                HttpMethod.POST,
-                request,
-                Map.class
-        );
-
+        ResponseEntity<Map> response = restTemplate.exchange("https://api.openai.com/v1/chat/completions", HttpMethod.POST, request, Map.class);
         return extractContent(response.getBody());
+    }
+
+    private Map<String, String> extractFallback(String raw) {
+        Map<String, String> data = new HashMap<>();
+        data.put("nome", "Cliente");
+        data.put("servico", "Atendimento");
+        data.put("data", java.time.LocalDate.now().plusDays(1).toString());
+        data.put("hora", "10:00");
+        if (raw != null && !raw.isBlank()) {
+            data.put("servico", raw.length() > 120 ? raw.substring(0, 120) : raw);
+        }
+        return data;
+    }
+
+    private Map<String, String> parseLooseJson(String content) {
+        Map<String, String> data = extractFallback(content);
+        if (content == null) return data;
+        String sanitized = content.replace("{", "").replace("}", "").replace("\"", "");
+        for (String part : sanitized.split(",")) {
+            String[] kv = part.split(":", 2);
+            if (kv.length == 2) {
+                data.put(kv[0].trim(), kv[1].trim());
+            }
+        }
+        return data;
     }
 
     @SuppressWarnings("unchecked")

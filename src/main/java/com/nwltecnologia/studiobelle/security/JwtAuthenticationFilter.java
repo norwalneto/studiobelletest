@@ -19,7 +19,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/auth/login",
             "/auth/register",
             "/auth/refresh",
-            "/tenants"
+            "/tenants",
+            "/whatsapp/webhook"
     );
 
     private final JwtService jwtService;
