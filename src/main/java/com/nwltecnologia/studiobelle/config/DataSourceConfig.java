@@ -3,11 +3,14 @@ package com.nwltecnologia.studiobelle.config;
 import com.nwltecnologia.studiobelle.security.JwtAuthenticationFilter;
 import com.nwltecnologia.studiobelle.tenant.TenantFilter;
 import com.nwltecnologia.studiobelle.tenant.TenantRoutingDataSource;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
 
@@ -15,9 +18,23 @@ import javax.sql.DataSource;
 public class DataSourceConfig {
 
     @Bean
-    public FilterRegistrationBean<TenantFilter> tenantFilter() {
+    @ConfigurationProperties("spring.datasource")
+    public DataSourceProperties masterDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = "masterDataSource")
+    public DataSource masterDataSource(DataSourceProperties masterDataSourceProperties) {
+        return masterDataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
+
+    @Bean
+    public FilterRegistrationBean<TenantFilter> tenantFilter(TenantFilter tenantFilter) {
         FilterRegistrationBean<TenantFilter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(new TenantFilter());
+        registration.setFilter(tenantFilter);
         registration.addUrlPatterns("/*");
         registration.setOrder(1);
         return registration;
@@ -34,16 +51,10 @@ public class DataSourceConfig {
 
     @Bean
     @Primary
-    public DataSource dataSource(TenantRoutingDataSource routingDataSource) {
-
-        DriverManagerDataSource defaultDataSource = new DriverManagerDataSource();
-        defaultDataSource.setUrl("jdbc:postgresql://localhost:5432/studiobelle");
-        defaultDataSource.setUsername("postgres");
-        defaultDataSource.setPassword("postgres");
-        defaultDataSource.setDriverClassName("org.postgresql.Driver");
-
-        routingDataSource.setDefaultTargetDataSource(defaultDataSource);
-
+    public DataSource dataSource(TenantRoutingDataSource routingDataSource,
+                                 @Qualifier("masterDataSource") DataSource masterDataSource) {
+        routingDataSource.setDefaultTargetDataSource(masterDataSource);
+        routingDataSource.afterPropertiesSet();
         return routingDataSource;
     }
 }

@@ -1,43 +1,28 @@
 package com.nwltecnologia.studiobelle.tenant;
 
-import com.nwltecnologia.studiobelle.tenantmaster.Tenant;
-import com.nwltecnologia.studiobelle.tenantmaster.TenantRepository;
+import com.nwltecnologia.studiobelle.tenantmaster.master.MasterTenantDirectory;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Component;
-
-import javax.sql.DataSource;
 
 @Component
 public class TenantLoader {
 
-    private final TenantRepository tenantRepository;
-
+    private final MasterTenantDirectory masterTenantDirectory;
     private final TenantRoutingDataSource routingDataSource;
+    private final DataSourceFactory dataSourceFactory;
 
-    public TenantLoader(TenantRepository tenantRepository, TenantRoutingDataSource routingDataSource) {
-        this.tenantRepository = tenantRepository;
+    public TenantLoader(MasterTenantDirectory masterTenantDirectory,
+                        TenantRoutingDataSource routingDataSource,
+                        DataSourceFactory dataSourceFactory) {
+        this.masterTenantDirectory = masterTenantDirectory;
         this.routingDataSource = routingDataSource;
+        this.dataSourceFactory = dataSourceFactory;
     }
 
     @PostConstruct
     public void loadTenants() {
-
-        var tenants = tenantRepository.findAll();
-
-        for (var tenant : tenants) {
-            DataSource ds = createDataSource(tenant);
-            routingDataSource.addTenant(tenant.getTenantId(), ds);
-        }
-    }
-
-    private DataSource createDataSource(Tenant tenant) {
-        DriverManagerDataSource ds = new DriverManagerDataSource();
-        ds.setUrl("jdbc:postgresql://localhost:5432/" + tenant.getDatabaseName());
-        ds.setUsername(tenant.getUsername());
-        ds.setPassword(tenant.getPassword());
-        ds.setDriverClassName("org.postgresql.Driver");
-        return ds;
+        masterTenantDirectory.findAllTenantDatabases().forEach(tenant ->
+                routingDataSource.addTenant(tenant.tenantId(), dataSourceFactory.createDataSource(tenant))
+        );
     }
 }
