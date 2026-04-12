@@ -4,10 +4,12 @@ import com.nwltecnologia.studiobelle.tenant.DataSourceFactory;
 import com.nwltecnologia.studiobelle.tenant.TenantRoutingDataSource;
 import com.nwltecnologia.studiobelle.util.StringUtils;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class TenantService {
 
     private final DataSourceFactory dataSourceFactory;
 
-    public TenantService(DataSource masterDataSource, TenantRepository tenantRepository, TenantRoutingDataSource routingDataSource, DataSourceFactory dataSourceFactory) {
+    public TenantService(@Qualifier("masterDataSource") DataSource masterDataSource, TenantRepository tenantRepository, TenantRoutingDataSource routingDataSource, DataSourceFactory dataSourceFactory) {
         this.masterDataSource = masterDataSource;
         this.tenantRepository = tenantRepository;
         this.routingDataSource = routingDataSource;
@@ -54,15 +56,45 @@ public class TenantService {
         Tenant tenant = new Tenant();
         tenant.setNome(request.getNome());
         tenant.setTenantId(tenantId); // 🔥 NOVO CAMPO
+        tenant.setSubdomain(sanitize(request.getSubdomain()));
         tenant.setDatabaseName(dbName);
         tenant.setUsername("postgres");
         tenant.setPassword("postgres");
+        tenant.setPhoneNumberId(request.getPhoneNumberId());
+        tenant.setBusinessAccountId(request.getBusinessAccountId());
 
         tenantRepository.save(tenant);
+
+        if (request.getPhoneNumberId() != null && !request.getPhoneNumberId().isBlank()) {
+            saveWhatsAppAccount(tenantId, request.getPhoneNumberId(), request.getBusinessAccountId(), request.getAccessToken());
+        }
 
         // 4. adiciona no routing
         DataSource ds = dataSourceFactory.createDataSource(tenant);
         routingDataSource.addTenant(tenantId, ds); // 🔥 CORRETO
+    }
+
+
+    private void saveWhatsAppAccount(String tenantId, String phoneNumberId, String businessAccountId, String accessToken) {
+        String sql = """
+                INSERT INTO whatsapp_accounts (tenant_id, phone_number_id, business_account_id, access_token)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT (tenant_id)
+                DO UPDATE SET phone_number_id = EXCLUDED.phone_number_id,
+                              business_account_id = EXCLUDED.business_account_id,
+                              access_token = EXCLUDED.access_token
+                """;
+
+        try (Connection conn = masterDataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, tenantId);
+            ps.setString(2, phoneNumberId);
+            ps.setString(3, businessAccountId);
+            ps.setString(4, accessToken);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void criarBanco(String dbName) {
@@ -87,6 +119,9 @@ public class TenantService {
     }
 
     private String sanitize(String input) {
+        if (input == null || input.isBlank()) {
+            return null;
+        }
         return input.toLowerCase().replaceAll("[^a-z0-9_]", "_");
     }
 }

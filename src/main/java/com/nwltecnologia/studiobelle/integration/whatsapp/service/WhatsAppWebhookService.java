@@ -35,9 +35,11 @@ public class WhatsAppWebhookService {
     }
 
     public AppointmentResponse process(WhatsAppWebhookRequest request) {
+        String tenantId = currentTenant();
         Map<String, String> data = openAiService.extractAppointmentData(request.message());
-        Customer customer = customerService.createOrUpdateByPhone(request.tenantId(), request.fromPhone(), data.get("nome"));
-        Long ownerId = userRepository.findAllByTenantId(request.tenantId()).stream().findFirst()
+        String customerName = data.getOrDefault("nome", request.customerName());
+        Customer customer = customerService.createOrUpdateByPhone(tenantId, request.fromPhone(), customerName);
+        Long ownerId = userRepository.findAllByTenantId(tenantId).stream().findFirst()
                 .orElseThrow(() -> new BusinessException("Nenhum usuário encontrado para o tenant"))
                 .getId();
 
@@ -50,4 +52,12 @@ public class WhatsAppWebhookService {
 
         return appointmentService.create(appointmentRequest);
     }
+    private String currentTenant() {
+        String tenant = com.nwltecnologia.studiobelle.tenant.TenantContext.getTenant();
+        if (tenant == null || tenant.isBlank()) {
+            throw new BusinessException("Tenant não identificado no webhook");
+        }
+        return tenant;
+    }
+
 }

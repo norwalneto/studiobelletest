@@ -12,18 +12,15 @@ public class WhatsAppClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final String apiUrl;
-    private final String bearerToken;
 
-    public WhatsAppClient(@Value("${app.whatsapp.api-url:https://graph.facebook.com/v19.0}") String apiUrl,
-                          @Value("${app.whatsapp.access-token:}") String bearerToken) {
+    public WhatsAppClient(@Value("${app.whatsapp.api-url:https://graph.facebook.com/v19.0}") String apiUrl) {
         this.apiUrl = apiUrl;
-        this.bearerToken = bearerToken;
     }
 
-    public void sendTextMessage(String phoneNumberId, String toPhone, String message) {
+    public void sendTextMessage(String accessToken, String phoneNumberId, String toPhone, String message) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(bearerToken);
+        headers.setBearerAuth(accessToken);
 
         Map<String, Object> payload = Map.of(
                 "messaging_product", "whatsapp",
