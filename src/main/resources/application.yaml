@@ -16,7 +16,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect   # 🔥 ESSENCIAL
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
   flyway:
@@ -24,6 +24,20 @@ spring:
 
 server:
   port: 8080
+
+app:
+  security:
+    jwt:
+      secret: change-me-in-production
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 604800
+  whatsapp:
+    api-url: https://graph.facebook.com/v19.0
+    access-token: ''
+    phone-number-id: ''
+  openai:
+    api-key: ''
+    model: gpt-4o-mini
 
 logging:
   level:

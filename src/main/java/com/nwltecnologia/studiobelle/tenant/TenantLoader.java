@@ -28,7 +28,7 @@ public class TenantLoader {
 
         for (var tenant : tenants) {
             DataSource ds = createDataSource(tenant);
-            routingDataSource.addTenant(tenant.getDatabaseName(), ds);
+            routingDataSource.addTenant(tenant.getTenantId(), ds);
         }
     }
 
