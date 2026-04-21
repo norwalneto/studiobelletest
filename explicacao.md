@@ -888,9 +888,9 @@ Executa a cada 30 minutos:
    - calcula threshold por `inactivityDays`;
    - busca clientes inativos;
    - para cada cliente com telefone:
-     - monta mensagem com template (`{nome}`, `{dias}`);
-     - opcionalmente humaniza com OpenAI se `aiEnabled`;
-     - envia WhatsApp.
+   - monta mensagem com template (`{nome}`, `{dias}`);
+   - opcionalmente humaniza com OpenAI se `aiEnabled`;
+   - envia WhatsApp.
 
 ### Classe: `AutomationController`
 - `GET /automations`;
